@@ -1,0 +1,7 @@
+azcopy_install/
+workshop_users.csv
+workshop_user_passwords.csv
+workshop_environment.md
+*.rtf
+__pycache__/
+.vscode/
