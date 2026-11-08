@@ -48,11 +48,10 @@ If you do not already have a Lakehouse, create a new one:
 
 3. On the **Home** tab of the ribbon, open the **Options** dialog.
 4. Under **General**, enable:
-   - **Always allow parameterization in data source settings**
+   - **Always allow parameterization in data source and transformation dialogs**
 5. Under **Scale**, enable all of the following:
    - Allow use of Fast Copy Connectors
-   - Allow use of the Modern Query Evaluator
-   - Allow use of the modern refresh service
+   - Allow use of the modern query evaluation engine
    - Optimized copy to Lakehouse
    - Enable V-order compression
 6. Close the dialog.
@@ -65,11 +64,11 @@ If you do not already have a Lakehouse, create a new one:
 8. Create the first parameter:
    - **Name:** `ServerName`
    - **Type:** Text
-   - **Value:** Paste in your SQL Server path
+   - **Current value:** `sqldiws2026.database.windows.net`
 9. Select **New** and create a second parameter:
    - **Name:** `DBName`
    - **Type:** Text
-   - **Value:** Paste in your database name
+   - **Current value:** `sqldb-di-workshop-diuserXX` (replace `diuserXX` with your workshop user number, e.g., `sqldb-di-workshop-diuser1`)
 10. Close the dialog.
 
 #### Get Data
@@ -96,9 +95,11 @@ If you do not already have a Lakehouse, create a new one:
 
 21. Select the **Product** query, then choose **Combine** → **Merge queries** from the ribbon.
     - **Right table to merge:** `ProductCategory`
-    - **Join columns:** `ProductCategoryID` (in both tables)
+    - **Join columns:** Select the `ProductCategoryID` column header in both tables (the top `Product` table and the bottom `ProductCategory` table) to set it as the join column.
     - **Join Kind:** Left outer
     - Select **OK**.
+
+    ![Merge dialog with ProductCategoryID selected in both tables and Left outer join kind](images/merge-product-category.png)
 
 22. Expand the newly added `ProductCategory` column and select only the **Name** column.
 23. Rename the expanded column to `ProductCategory`.
@@ -111,17 +112,13 @@ If you do not already have a Lakehouse, create a new one:
 25. Scroll to the **OneLake Catalog** section and select the `LH_AdvWorks` Lakehouse.
 26. **Deselect** the `ProductCategory` query (its data was already merged into `Product`) and select **Bind selected queries**.
 
-#### Note the Connection
-
-27. Select **Manage Connections** and note the name of the SQL Server connection used in this Dataflow — you will need it for the next exercise.
-
 #### Refresh the Data
 
-28. From the ribbon, select **Save & run** → **Save, run & close**.
-29. Navigate back to your workspace and wait for the refresh to complete.
+27. From the ribbon, select **Save & run** → **Save, run & close**.
+28. Navigate back to your workspace and wait for the refresh to complete.
     - Hover over the spinning circle to check refresh status.
-30. When the refresh completes, select the **ellipsis (…)** for the Dataflow → **Recent runs**.
-31. Select the DateTime hyperlink to see refresh details for each query/activity, then click on an individual activity to view **Activity statistics**.
+29. When the refresh completes, select the **ellipsis (…)** for the Dataflow → **Recent runs**.
+30. Select the DateTime hyperlink to see refresh details for each query/activity, then click on an individual activity to view **Activity statistics**.
 
 > **✅ Checkpoint:** The `Customer` and `Product` tables (with merged `ProductCategory`) should be visible in the `LH_AdvWorks` Lakehouse.
 
@@ -152,7 +149,7 @@ If you do not already have a Lakehouse, create a new one:
 3. Add a **Source** activity and configure it:
    - **Output stream name:** `SQLDB1`
    - **Connection type:** Azure SQL Server (or the source used above)
-   - **Connection:** Select the same connection noted in Exercise 1 (or create a new one if needed)
+   - **Connection:** Select the same SQL Server connection used in Exercise 1 (or create a new one if needed)
 4. In the upper right, use the slider to start a **Debug session** with a **1-hour Live duration**.
 5. Under **Source Options**, select your database, schema, and the **SalesOrderDetail** table (hit **Refresh** as needed).
 6. Under **Projection**, select **Import Schema** then **Overwrite Schema**. Change the `ModifiedDate` column to **Date** type.

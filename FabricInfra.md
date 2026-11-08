@@ -17,7 +17,7 @@ Names in the table are the prompt defaults; `<suffix>` is the short suffix you e
 | 3 | ADLS Gen2 Storage | `adlsdiws<suffix>` | HNS enabled, Standard_LRS. Public endpoint denies all traffic except allow-listed IPs; private endpoints for blob + dfs |
 | 4 | Blob Container | `opendatasets` | NYC Taxi data (`nyctlc/yellow` by default, or the folders you choose) |
 | 5 | Key Vault | `kv-diws-<suffix>` | RBAC authorization, same firewall model as storage, private endpoint. Holds the lab service principal secret (and the SQL admin password if SQL auth is used) |
-| 6 | SQL Server | `sqldiws<suffix>` | **Public network access disabled**; private endpoint only. Entra-only auth by default. Can be in a different region (private endpoint stays in the VNet) |
+| 6 | SQL Server | `sqldiws2026` | Endpoint: `sqldiws2026.database.windows.net`, matching the lab docs. **Public network access disabled**; private endpoint only. Entra-only auth by default. Can be in a different region (private endpoint stays in the VNet) |
 | 7 | SQL Database | `sqldb-di-workshop` | S3, pre-loaded with the AdventureWorksLT sample |
 | 8 | VNet | `vnet-di-workshop` | `10.60.0.0/16` with `snet-private-endpoints` and `snet-fabric-gateway` (delegated to `Microsoft.PowerPlatform/vnetaccesslinks`) |
 | 9 | Private DNS zones | `privatelink.database.windows.net`, `privatelink.blob.core.windows.net`, `privatelink.dfs.core.windows.net`, `privatelink.vaultcore.azure.net` | Linked to the VNet |
@@ -27,7 +27,7 @@ Names in the table are the prompt defaults; `<suffix>` is the short suffix you e
 
 | Object | Default name | Details |
 |--------|--------------|---------|
-| Workshop users | `diuser01@<domain>` … `diuserNN@<domain>` | The setup prompt determines how many users are created. Each gets a generated password with its username suffix, saved to `workshop_user_passwords.csv` (gitignored) |
+| Workshop users | `diuser1@<domain>` … `diuserN@<domain>` | The setup prompt determines how many users are created. All users share the one password you enter at setup (no forced change at first sign-in); it is saved to `workshop_user_passwords.csv` (gitignored) |
 | Lab service principal | `DIworkshop` | App registration + service principal used by the mirroring lab. Its client secret is created by the script, **stored in Key Vault, and read back from Key Vault** (validated with a client-credentials sign-in) |
 | SQL admin group | `DI Workshop SQL Admins` | Security group containing you and the lab service principal; set as the SQL server's Entra admin |
 | Participants group | `DI Workshop Participants` | All workshop users; has `db_datareader` + `db_datawriter` and the mirroring permissions on the database and `Storage Blob Data Reader` on the storage account, so notebooks and lab connections sign in as the participant (no passwords or keys) |
@@ -84,7 +84,7 @@ The scripts run as **your** Azure CLI user. That account needs:
 | **Entra ID** | **Groups Administrator** (or User Administrator) | Create the SQL admin and Fabric API groups |
 | **Entra ID** | **Privileged Role Administrator** or **Global Administrator** | Assign Directory Readers to the SQL server's managed identity |
 | **Entra ID** | **Security Administrator** or **Global Administrator** | Only if you choose to disable Security Defaults |
-| **Entra ID** | **Conditional Access Administrator** (or Security/Global Administrator) | Only if you exclude participants from MFA Conditional Access policies |
+| **Entra ID** | **Conditional Access Administrator** (or Security/Global Administrator) | Exclude the participants group from MFA Conditional Access policies (done automatically when such policies exist) |
 | **Fabric** | **Fabric Administrator** | Update the Fabric tenant settings and look up the capacity via the admin API |
 
 ---
@@ -112,7 +112,7 @@ Every prompt shows a `[default]` — press Enter to accept it. The selected Azur
 | Location | Azure region | `eastus2` |
 | | Resource group | `rg-di-workshop` |
 | Unique names | Suffix for globally unique names | — (required) |
-| | Storage account / SQL server / Key Vault names | `adlsdiws<suffix>` / `sqldiws<suffix>` / `kv-diws-<suffix>` |
+| | Storage account / SQL server / Key Vault names | `adlsdiws<suffix>` / `sqldiws2026` / `kv-diws-<suffix>` |
 | Fabric | Pause the capacity every night? Pause time / time zone | Yes / `20:00` / your local Windows time zone (e.g. `Central Standard Time`) |
 | | Configure the Fabric tenant settings? | Yes |
 | | Capacity SKU / region | `F64` / same as region — the region must have enough Fabric capacity quota (CUs) for the SKU; otherwise a region with quota is suggested |
@@ -123,7 +123,7 @@ Every prompt shows a `[default]` — press Enter to accept it. The selected Azur
 | SQL | SQL server region | same as region, or the first region where this subscription is allowed to create SQL servers |
 | | Entra-only authentication? | Yes (default — notebooks and connections use Entra sign-in). If No: SQL admin login (`sqladmin`) and password (blank = generated, stored in Key Vault) |
 | Users | Number of workshop users | `5` |
-| | Exclude the participants group from Conditional Access policies that require MFA? (only asked if such policies exist; lists them first) | Yes if another policy blocks MFA registration (new users couldn't sign in otherwise), else No |
+| | Password for all workshop users | none — required; must have 8+ characters and 3 of: lowercase, uppercase, digit, symbol. Every user gets the same password |
 | Advanced (optional) | Database SKU, SQL admin group, lab app name, user/workspace prefixes, VNet name and ranges, gateway auto-sleep, Logic App name, Fabric API group name, disable Security Defaults | see the tables above; workshop users are always Admins of their own workspaces |
 
 **What it does**
@@ -140,7 +140,7 @@ Every prompt shows a `[default]` — press Enter to accept it. The selected Azur
 | 8 | Creates the VNet, subnets, private endpoints (SQL, blob, dfs, vault) and private DNS zones |
 | 9 | Mirroring prep: SQL managed identity + Directory Readers, group set as Entra admin |
 | 10 | Disables Security Defaults — only if you opted in |
-| 11 | Creates the workshop users (Graph API), writes `workshop_users.csv`, creates the participants group and — if you chose to — excludes it from the MFA Conditional Access policies |
+| 11 | Creates the workshop users (Graph API) with the shared password, writes `workshop_users.csv` and `workshop_user_passwords.csv`, creates the participants group and excludes it from every Conditional Access policy that requires MFA for all users, so participants never register or use MFA |
 | 12 | Makes sure the capacity is active |
 | 13 | Creates one workspace per user, assigns the capacity, and makes that user an Admin of their own workspace |
 | 14 | Creates the Fabric VNet data gateway and grants users ConnectionCreator |
@@ -233,7 +233,9 @@ If an automation service principal needs Fabric/Power BI *admin APIs*:
 
 ## MFA / Security Defaults
 
-The setup only touches Security Defaults if you opt in under **Advanced**. That setting is **tenant-wide** — use it only in a throwaway demo tenant. To change it manually: **Microsoft Entra ID → Properties → Manage Security Defaults**.
+Workshop users never use MFA: setup automatically excludes the **DI Workshop Participants** group from every enabled Conditional Access policy that requires MFA (or a risk-based MFA/password change) for all users, and `delete_all.py` removes those exclusions again. Policies that only block MFA *registration* are left alone — participants never need to register.
+
+Security Defaults can't be combined with Conditional Access exclusions. The setup only turns Security Defaults off if you opt in under **Advanced**. That setting is **tenant-wide** — use it only in a throwaway demo tenant. To change it manually: **Microsoft Entra ID → Properties → Manage Security Defaults**.
 
 ---
 
@@ -260,7 +262,7 @@ The setup only touches Security Defaults if you opt in under **Advanced**. That 
 | User or app creation fails | Check the Entra roles listed under [Prerequisites](#prerequisites) |
 | Notebook can't connect to SQL (timeout) | In **Workspace settings → Network security**, the managed private endpoint to the SQL server must be **Approved**. Re-run setup — it re-approves pending connections |
 | "Participant database access not configured" | Setup needs the ODBC Driver 18 for SQL Server locally and must be able to enable SQL public access briefly (a policy may block it). The problem message includes the T-SQL to run as the SQL Entra admin instead |
-| Workshop user sign-in fails with error **53003** ("does not meet the criteria to access this resource") | Conditional Access requires MFA and blocks MFA registration from the user's location. Re-run setup and answer **Yes** to excluding the participants group from the MFA policies (or exclude it in **Entra → Protection → Conditional Access**). Tenants with Microsoft-managed policies may reapply them — re-check the exclusions if sign-ins start failing again |
+| Workshop user sign-in fails with error **53003** ("does not meet the criteria to access this resource") | Conditional Access requires MFA and blocks MFA registration from the user's location. Re-run setup (it excludes the participants group from the MFA policies), or exclude it in **Entra → Protection → Conditional Access**. Tenants with Microsoft-managed policies may reapply them — re-check the exclusions if sign-ins start failing again |
 | Resource group delete fails with `InUseSubnetCannotBeDeleted` / `PowerPlatformSAL` | The gateway subnet is released 2-3 hours after the gateway is deleted. Re-run `delete_all.py` later |
 
 ## License

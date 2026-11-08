@@ -135,7 +135,7 @@ Copy Job is Fabric's preferred solution for simplified data movement. It nativel
      > **💡 You most likely already have this connection.** The mirroring lab in Module 1 (Part 4) created a connection to this same server and database. If it appears under **Existing connections**, select it and go straight to choosing tables.
 
    - Otherwise, create a new connection to the source:
-     - **Server:** `<sql-server>.database.windows.net`
+     - **Server:** `sqldiws2026.database.windows.net`
      - **Database:** `sqldb-di-workshop-diuser1` (replace `diuser1` with your workshop user number)
      - **Data gateway:** `vnetgw-di-workshop`
      - **Authentication kind:** Organizational account — sign in with your workshop user account when prompted.
@@ -145,11 +145,11 @@ Copy Job is Fabric's preferred solution for simplified data movement. It nativel
      - `SalesLT.SalesOrderHeader`
      - `SalesLT.SalesOrderDetail`
    - **Add audit columns.** Still on this step, enrich the rows of the table you'll modify in Exercise 1b with data-movement metadata. Audit columns are configured **per table**, so select **only `SalesLT.SalesOrderHeader`** in the table list and add **all** available audit columns **except `Custom`** and **`File path`** (a SQL source has no file path):
-     - **Data extraction time**
      - **Workspace ID**
      - **Copy job ID**
      - **Copy job run ID**
      - **Copy job name**
+     - **Data extraction time**
      - **Lower bound**
      - **Upper bound**
 
@@ -157,7 +157,10 @@ Copy Job is Fabric's preferred solution for simplified data movement. It nativel
 
      ![Configuring audit columns on SalesLT.SalesOrderHeader in the Copy Job source step](images/copy-job-audit-columns.png)
 4. In the **Choose data destination** step:
-   - Select **Lakehouse**, then pick `Contoso_Bronze_LH` from the **OneLake catalog** section of the screen. Selecting it from the OneLake catalog attaches the job to your **existing** lakehouse — do **not** create a new lakehouse here.
+   - Pick `Contoso_Bronze_LH` from the **OneLake catalog** section of the screen. Selecting it from the OneLake catalog attaches the job to your **existing** lakehouse — do **not** create a new lakehouse here.
+   - Leave the **Connection settings** as they are. The **Connection (optional)** value of **(none)** uses your own permissions to access the lakehouse.
+
+     ![Connection settings for the Contoso_Bronze_LH destination in the Copy Job](images/copy-job-destination-connection.png)
 5. In the **Settings** step:
    - Set **Copy mode** to **Full copy**.
    - Verify the destination **root folder** is set to **Tables** (so the data lands as managed lakehouse tables, not files).
@@ -166,6 +169,10 @@ Copy Job is Fabric's preferred solution for simplified data movement. It nativel
    - Accept the **default table mappings** — the source table names carry over to the destination.
    - Leave the **column mappings** at their defaults as well; no edits are needed.
 7. Select **Save + Run** and monitor the run from the Copy Job detail page.
+8. Switch to the `Contoso_Bronze_LH` lakehouse (for example, select its tab at the top of the Fabric portal). In the **Explorer**, hover your mouse to the right of **Tables**, select the **...** (three dots) menu, and select **Refresh** to see your newly loaded tables and the `SalesLT` schema.
+9. Select the `SalesOrderHeader` table to preview its data, then scroll all the way to the right to see the new audit columns. The **Lower bound** and **Upper bound** columns are empty because you haven't run an incremental load yet.
+
+   ![Refreshing Tables in Contoso_Bronze_LH and previewing the audit columns on SalesOrderHeader](images/lakehouse-refresh-full-load.png)
 
 > **✅ Checkpoint:** All four tables appear under **Tables** in `Contoso_Bronze_LH` with their full row counts, and `salesorderheader` includes the audit columns you added (for example **Copy job name** and **Data extraction time**).
 
@@ -182,9 +189,13 @@ Copy Job is Fabric's preferred solution for simplified data movement. It nativel
 
 5. Now insert some new rows in the source so the *next* run has changes to pick up. You don't need a local SQL client — a Fabric notebook connects to your per-user database as your signed-in user and inserts five rows into `[SalesLT].[SalesOrderHeader]`. Because you have your own dedicated database, there are no conflicts with other participants:
 
-   1. In your workspace, select **Import** → **Notebook** → **From this computer**, and upload `insert-sales-orders.ipynb` from this module folder.
-   2. Open the notebook and select **Run all**.
-   3. Confirm the output lists the five inserted `SalesOrderID` values.
+   1. Open the workshop GitHub repository at [https://aka.ms/fabric-di-workshop](https://aka.ms/fabric-di-workshop).
+   2. In the **Files** pane, browse to `workspace/di-in-a-day-lab/Module-02-Data-Movement` and select `insert-sales-orders.ipynb`.
+   3. Select the **Download raw file** button at the top right of the file view to save the notebook to your computer.
+   4. In your workspace, select **Import** → **Notebook** → **From this computer**, and upload the `insert-sales-orders.ipynb` file you just downloaded.
+   5. Open the notebook. In Cell 1, change the `SQL_DATABASE` value from `sqldb-di-workshop-diuserXX` to your database name (replace `diuserXX` with your workshop user number, e.g., `sqldb-di-workshop-diuser1`).
+   6. Select **Run all**.
+   7. Confirm the output lists the five inserted `SalesOrderID` values.
 6. Back on the Copy Job, select **Run** to trigger it again.
 7. Confirm that **only the new rows** were copied — the run summary shows rows read/written on `SalesLT.SalesOrderHeader` and zero on the unchanged tables:
 
@@ -235,23 +246,33 @@ Copy Activity is the data-movement workhorse in Data Factory. Embedded within a 
 
    > **Careful — two choices:** the drop-down lists both **Add copy data activity** and an option with **Job** in its name. Select the one **without** *Job*. The *Job* option adds a **Copy Job** activity (what you built in Exercise 1) — it's simply one way to orchestrate a Copy Job inside a pipeline if you ever need to, but it's not what this exercise uses.
 3. Configure the **Source**:
-   - **Connection:** Create a new connection to ADLS Gen2:
-     - **URL:** `https://<storage-account>.dfs.core.windows.net`
-     - **Data gateway:** `vnetgw-di-workshop`
+   - Select the **Source** tab, open the **Connection** drop-down, and choose **Browse all**.
+   - In the **Get data** search box, type `lake` and select **Azure Data Lake Storage Gen2**.
+
+     ![Selecting Azure Data Lake Storage Gen2 in the Get data search results](images/copy-activity-adls-gen2-source.png)
+   - Create a new connection to ADLS Gen2:
+     - **URL:** `https://adlsdiws.dfs.core.windows.net/`
+     - **Data gateway:** `vnetgw-di-workshop-2026`
      - **Authentication kind:** **Organizational account** — sign in with your workshop user account when prompted.
+
+     ![Azure Data Lake Storage Gen2 connection settings for the workshop storage account](images/copy-activity-adls-gen2-connection.png)
    - **File system:** `opendatasets`
    - **Directory:** `nyctlc/yellow`
    - **File format:** **Binary** — this exercise does a straight binary file copy, with no parsing or schema.
    - Enable **Recursively** to include all files in the folder.
+
+     ![Copy activity Source tab with the file path, Recursively, and Binary file format configured](images/copy-activity-source-settings.png)
 4. Configure the **Destination** (sink):
-   - Open the **Data store type** drop-down and select **Browse**, then choose the `Contoso_Bronze_LH` lakehouse from the **OneLake catalog** section.
+   - Open the **Connection** drop-down and select **Browse**, then choose the `Contoso_Bronze_LH` lakehouse from the **OneLake catalog** section.
    - **Root folder:** **Files**.
    - **Directory:** `nytaxi`
    - **File format:** **Binary**.
    - **Copy behavior:** **Preserve hierarchy** — keeps the source folder structure and file names intact.
 
    > **Why a binary copy?** Copying the files as-is (Binary) performs much better than parsing them into a table during ingestion. Once the files are in the lakehouse **Files** area, you can load them into a table whenever you like — right-click the folder and choose **Load to Tables**, or do it programmatically from a notebook.
-5. Select **Run** and monitor execution on the **Output** tab.
+
+      ![Copy activity Destination tab with the file path, Binary file format, and Preserve hierarchy copy behavior configured](images/copy-activity-destination-settings.png)
+   5. Select **Run** and monitor execution on the **Output** tab.
 
 > **✅ Checkpoint:** Open `Contoso_Bronze_LH`, expand **Files → nytaxi**, and confirm the NYC Taxi parquet files copied over with their original folder hierarchy and file names preserved.
 
@@ -280,14 +301,20 @@ Eventstream, part of Fabric's Real-Time Intelligence experience, enables **no-co
 2. Select **Add source** → **Sample data**.
    - Set the source **Name** to `YellowTaxi` and choose the **Yellow Taxi** sample dataset, then select **Add**. Events begin flowing immediately.
 3. Add a **Filter** transformation to keep only longer trips:
-   - On the canvas, select **Transform events** → **Filter**.
+   - On the button bar, select **Transform events** → **Filter**.
    - Set the **Operation name** to `Trip_GT_1mile`.
+   - On the canvas, connect the stream to the `Trip_GT_1mile` filter by dragging from the output of the stream node to the filter node. You must do this before you can set the condition.
    - Add the condition `trip_distance` **>** `1` so only trips greater than 1 mile pass through.
+
+     ![Eventstream canvas with the stream connected to the Trip_GT_1mile filter and its condition configured](images/eventstream-filter.png)
+   - Select **Save**.
 4. Add a destination:
    - Select **Add destination** → **Lakehouse** → `Contoso_Bronze_LH`.
    - For the **Delta table**, choose **Create new table**, create a new schema named `yt`, and name the table `trips` (giving you `yt.trips`).
    - **Input data format:** **Json**
    - Select **Save**.
+
+     ![Eventstream Lakehouse destination with Contoso_Bronze_LH selected and the new yt.trips table](images/eventstream-lakehouse-destination.png)
 5. **Connect the filter to the destination.** On the canvas, drag from the output of the `Trip_GT_1mile` filter node to the Lakehouse destination node so the filtered events flow into it.
 6. Select **Publish** to activate the Eventstream, then watch events flow through the **YellowTaxi** source → **Trip_GT_1mile** filter → **Lakehouse** destination on the canvas.
 
@@ -355,4 +382,4 @@ Stop the Eventstream from its context menu when the lab is over, and pause the `
 ---
 
 **Previous:** [← Module 1 — Fabric Mirroring](../Module-01-Fabric-Mirroring/)  
-**Next:** [Module 3 — Orchestration →](../Module-03-Orchestration.md)
+**Next:** [Module 3 — Orchestration →](../Module-03-Orchestration/Module-03-Orchestration.md)

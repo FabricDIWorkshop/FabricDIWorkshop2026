@@ -111,7 +111,7 @@ Use `<your-workspace>` and the deployment values in the workshop environment han
 </p>
 
 
-6. Search and Select the Workspace Identity you created in Step 2. Click on the dropdown and select the **Contributor** role assignment. Then select **Add**. Finally select **X** to close this panel. 
+6. Search and Select the Workspace Identity you created in Step 2. Click on the dropdown and select the **Admin** role assignment. Then select **Add**. Finally select **X** to close this panel. 
 <p align="center">
   <img src=".\images\Part_1_Step_6.png" width="40%">
 </p>
@@ -280,7 +280,7 @@ Neither is a workspace-wide configuration store.
 
 16. In the **General** tab of the **Set variable Activity**, specify `Set_Completed` for the **Name** field.
 
-17. Connect the `Set_Completed` ***Set variable Activity** to the **Wait activity** by clicking on the **On Success**, green checkmark, and dragging the line to the **Wait activity**. Select on the **Set variable Activity*** activity to display its options panel. 
+17. Connect the **Wait activity** to the `Set_Completed` **Set variable Activity** by clicking on the **Wait activity**'s **On Success**, green checkmark, and dragging the line to the **Set variable Activity**. Select on the **Set variable Activity** to display its options panel. 
 
 18. Select on the **Settings** tab then select on the drop-down for the **Name** fild. Select `status_message`.
    - Set **Value** to:
@@ -335,7 +335,7 @@ Neither is a workspace-wide configuration store.
 
 
 <p align="center">
-  <img src=".\images\Part_3_Step_5_1.png" width="90%">
+  <img src=".\images\Part_3_Step_1_5.png" width="90%">
 </p>
 
 ```text
@@ -347,7 +347,9 @@ The library holds shared configuration, not secrets or mutable counters. Changin
 ### Step 2 — Create the parent
 
 1. Create a data pipeline named `PL_ORCH_Parent`.
-2. Add **Parameters**:
+2. Select on the **Activities** tab, select **ForEach** to add a **ForEach Activity** to the **Authoring Canvas**, and set its **Name** to `ForEach_WorkItem`. Don't configure it yet — you'll do that in Step 3. Like the child pipeline, the parent needs an activity on the canvas before the pipeline-level options are available.
+3. Click any empty space in the **Authoring Canvas** to display the **Options Panel**.
+4. Add **Parameters**:
 
    In the Parameters tab of the Data Pipeline Options, select `New` and add the following:
    | Name | Type | Default |
@@ -356,8 +358,8 @@ The library holds shared configuration, not secrets or mutable counters. Changin
    | `run_children` | Bool | `true` |
    | `fail_item` | String | Empty string |
 
-3. Add a variable named `summary` with the type **String**.
-4. In the Pipeline's Options Panel, select the **Library variables** tab, add references to `EnvironmentName` and `WaitSeconds` from `VL_ORCH_Config`. Name the local references `EnvironmentName` and `WaitSeconds`.
+5. Add a variable named `summary` with the type **String**.
+6. In the Pipeline's Options Panel, select the **Library variables** tab, add references to `EnvironmentName` and `WaitSeconds` from `VL_ORCH_Config`. Name the local references `EnvironmentName` and `WaitSeconds`.
 
 ```text
 Note: You will need to add each reference one at a time
@@ -374,7 +376,7 @@ Note: You will need to add each reference one at a time
 
 ### Step 3 — Add ForEach with a nested conditional execution
 
-1. Add a **ForEach** named `ForEach_WorkItem`.
+1. Select the `ForEach_WorkItem` activity you added in Step 2 to display its settings.
 2. Configure:
    - **Items:** `@if(equals(pipeline().parameters.run_children,true),pipeline().parameters.work_items,array(''))`
    - **Sequential:** Off `the default`
@@ -386,8 +388,8 @@ Note: You will need to add each reference one at a time
 
 
 3. In the **ForEach** activity, add an **If Condition** activity named `If_RunChildren`.
-2. Set its expression to `@pipeline().parameters.run_children`.
-3. In its **False** case, add `Set_Disabled` (**Set variable**):
+4. Set its expression to `@pipeline().parameters.run_children`.
+5. In its **False** case, add `Set_Disabled` (**Set variable**):
    - Variable: `summary`
    - Value: `Child execution disabled by run_children`
  
@@ -564,7 +566,7 @@ After QuickDemo, restore `Lab` as the active library set, then run **Normal** ag
 </p>
 
 
-2. Right-click on line 29 in the code-editor and select **Run Fabric Artifact**. 
+2. Right-click on line 29 in the code-editor and select **Run Fabric Item**. 
 <p align="center">
 <img src=".\images\Part_4_Step_2_3.png" width="90%">
 </p>
@@ -575,7 +577,7 @@ After QuickDemo, restore `Lab` as the active library set, then run **Normal** ag
 <img src=".\images\Part_4_Step_2_4.png" width="90%">
 </p>
 
-4. Replace line 31 `hello_task` with `run_item`
+4. Replace line 48 `hello_task` with `run_item`
 
 
 <p align="center">

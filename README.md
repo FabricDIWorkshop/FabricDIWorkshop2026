@@ -184,7 +184,7 @@ You will play the role of a Contoso data engineer, building out this entire inte
 | **Kickoff** | Goals, Prerequisites & Lab Installation | This README |
 | **1** | Fabric Mirroring | [Module-01-Fabric-Mirroring/](workspace/di-in-a-day-lab/Module-01-Fabric-Mirroring/) |
 | **2** | Data Movement | [Module-02-Data-Movement/](workspace/di-in-a-day-lab/Module-02-Data-Movement/) |
-| **3** | Orchestration | [Module-03-Orchestration.md](workspace/di-in-a-day-lab/Module-03-Orchestration.md) |
+| **3** | Orchestration | [Module-03-Orchestration.md](workspace/di-in-a-day-lab/Module-03-Orchestration/Module-03-Orchestration.md) |
 | **4** | Transformation | [Module-04-Transformation/](workspace/di-in-a-day-lab/Module-04-Transformation/Module-04-Transformation.md) |
 | **5** | Monitoring & Telemetry | [Module-05-Monitoring-Telemetry.md](workspace/di-in-a-day-lab/Module-05-Monitoring-Telemetry.md) |
 | **6** | Fabric IQ: From Data to Insights | *Coming soon* |

@@ -56,7 +56,8 @@ workspace/di-in-a-day-lab/
 │   └── *.ipynb
 ├── Module-02-Data-Movement/
 │   └── data-movement-lab.md
-├── Module-03-Orchestration.md
+├── Module-03-Orchestration/
+│   └── Module-03-Orchestration.md
 ├── Module-04-Transformation/
 │   └── Module-04-Transformation.md
 ├── Module-05-Monitoring-Telemetry.md

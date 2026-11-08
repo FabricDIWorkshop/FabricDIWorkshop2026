@@ -130,7 +130,7 @@ Fabric needs a connection to the logical server before it can read the transacti
 1. Under **New sources**, select **Azure SQL Database**. If you already created a connection to this server, select it under **Existing connections** instead and skip ahead to Part 5.
 2. Enter the connection details:
    - **Server:** `sqldiws2026.database.windows.net`
-   - **Database:** `sqldb-di-workshop-diuser1` (replace `diuser1` with your workshop user number, e.g., `sqldb-di-workshop-diuser2`)
+   - **Database:** `sqldb-di-workshop-diuserXX` (replace `diuserXX` with your workshop user number, e.g., `sqldb-di-workshop-diuser1`)
    - **Connection:** Create new connection with name `sqlmirrorcred`
    - **Data gateway:** `vnetgw-di-workshop-2026`
    - **Authentication kind:** **Organizational account** — sign in with your workshop user account when prompted. This lab does not use a service principal.
@@ -142,38 +142,40 @@ A login failure here almost always means your account is missing the mirroring p
 
 ## Part 5: Start Mirroring
 
-The **Configure mirroring** screen defaults to **Mirror all data**, which replicates every eligible table and automatically picks up tables created after mirroring starts.
+The **Choose data** screen defaults to selecting all tables, which replicates every eligible table. It also defaults to **Automatically mirror future tables** so any new tables added to the source will be replicated to the destination.
 
-1. Leave **Mirror all data** selected so the whole `SalesLT` schema is replicated. To mirror a subset instead, turn the option off and select individual tables.
-2. When Fabric asks for a name for the mirrored database, enter exactly `AdventureWorksLT_Mirrored`. Later parts and the Part 8 notebook look for this name — the notebook sets `MIRRORED_DB = "AdventureWorksLT_Mirrored"` in Cell 1, so use any other name and you must update that variable to match.
-3. Select **Mirror database**.
-
+1. Leave all tables selected, but note that to mirror a subset of tables simply select individual tables.
+2. Select **Connect**.
+3. Enter the destination name for the mirrored database, enter exactly `AdventureWorksLT_Mirrored`. Later parts and the Part 8 notebook look for this name — the notebook sets `MIRRORED_DB = "AdventureWorksLT_Mirrored"` in Cell 1, so use any other name and you must update that variable to match.
+4. Select **Create mirrored database**.
 Replication begins immediately. Fabric takes an initial snapshot of each table and then applies incremental changes continuously as they land in the source.
 
 ## Part 6: Monitor Replication
 
 Fabric takes you to the mirroring status page as soon as replication starts.
 
-1. Wait two to five minutes, then select **Monitor replication**.
+1. Select the **Refresh** button below the **Monitor replication** heading.
 2. Refresh the panel if the table list is still empty. The overall status changes to **Running** once the tables are synchronizing.
-3. A timestamp in the **Last refresh** column means the initial copy of that table has finished.
+3. A timestamp in the **Last completed** column means the initial copy of that table has finished.
 
-Rows replicated and last refresh time are reported per table, so a single table stuck in a snapshot state is easy to spot without digging through logs.
+   ![Mirrored database status page showing the Refresh button, Last completed column, and Query in T-SQL button](images/monitor-replication.png)
+
+Rows replicated and last completed time are reported per table, so a single table stuck in a snapshot state is easy to spot without digging through logs.
 
 ## Part 7: Query the Mirrored Data
 
 Every mirrored database comes with a SQL analytics endpoint and a default semantic model, so the replicated tables are queryable in Fabric as soon as the snapshot lands.
 
-1. Open the `AdventureWorksLT_Mirrored` item and switch to the **SQL analytics endpoint**.
-2. Run a query against the mirrored tables.
+1. On the mirrored database status page, select **Query in T-SQL** under **Query this data** to open the SQL analytics endpoint of the mirrored database.
+
+   ![Query in T-SQL button on the mirrored database status page](images/monitor-replication.png)
+2. Select **New SQL query**, paste the following code, and select **Run**.
 
    ```sql
    SELECT TOP (100) CustomerID, CompanyName, SalesPerson
    FROM SalesLT.Customer
    ORDER BY CustomerID;
    ```
-
-3. Leave the source data unchanged here. Part 8 performs the source insert exercise from a Fabric notebook using your Microsoft Entra sign-in.
 
 From here the data is available across the whole of Fabric. Shortcut it into a lakehouse, join it to other mirrored or lakehouse tables in a warehouse query, or build a Power BI report on the default semantic model in Direct Lake mode.
 
@@ -187,10 +189,15 @@ The exercise runs in a Fabric notebook using the **Python** engine. It doesn't u
 
 Because you have your own dedicated per-user database, there are no multi-user conflicts—you can safely insert and delete rows without affecting other participants.
 
-1. In your workspace, select **Import** → **Notebook** → **From this computer**, and upload `mirroring-insert-exercise.ipynb` from this module folder.
-2. Open the notebook. On the **Home** tab, check the language drop-down. If it shows **PySpark (Python)**, select **Python** and confirm the switch.
-3. In Cell 1, replace `diuser1` with your workshop user number (e.g., `diuser2`) to connect to your per-user database.
-4. Run the cells in order. The first session can take a few minutes to start.
+1. Open the workshop GitHub repository at [https://aka.ms/fabric-di-workshop](https://aka.ms/fabric-di-workshop).
+2. In the **Files** pane, browse to `workspace/di-in-a-day-lab/Module-01-Fabric-Mirroring` and select `mirroring-insert-exercise.ipynb`.
+3. Select the **Download raw file** button at the top right of the file view to save the notebook to your computer.
+
+   ![Downloading mirroring-insert-exercise.ipynb from the workshop GitHub repository](images/download-notebook-github.png)
+4. In your workspace, select **Import** → **Notebook** → **From this computer**, and upload the `mirroring-insert-exercise.ipynb` file you just downloaded.
+5. Open the notebook. On the **Home** tab, check the language drop-down. If it shows **PySpark (Python)**, select **Python** and confirm the switch.
+6. In Cell 1, replace `diuser1` with your workshop user number (e.g., `diuser2`) to connect to your per-user database.
+7. Run the cells in order. The first session can take a few minutes to start.
 
 ### Notebook cell flow
 

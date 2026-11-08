@@ -308,7 +308,7 @@ def collect_inputs():
     suffix = ask('Short suffix to make names globally unique (lowercase letters/digits)', None,
                  regex_error(r'[a-z0-9]{1,8}', '1-8 lowercase letters or digits.'))
     storage_account = ask('Storage account name', f'adlsdiws{suffix}', storage_name_error)
-    sql_server = ask('SQL server name', f'sqldiws{suffix}', sql_name_error)
+    sql_server = ask('SQL server name', 'sqldiws2026', sql_name_error)
     key_vault = ask('Key Vault name', f'kv-diws-{suffix}', kv_name_error)
 
     section('Fabric capacity')
@@ -405,20 +405,19 @@ def collect_inputs():
 
     section('Workshop users')
     user_count = ask_int('Number of workshop users', 5, 1, 99)
+    print('  Every workshop user gets the same password so participants can sign in without delays.')
+    user_password = ask_secret('Password for all workshop users', password_error)
 
-    ca_policies, reg_blocked = mfa_policies(graph_token)
-    ca_exclude = False
+    # Workshop users are always excluded from MFA so a large room can sign in without registering methods.
+    ca_policies, _ = mfa_policies(graph_token)
     if ca_policies is None:
-        print('  (Could not read Conditional Access policies — skipping the MFA exclusion question)')
+        print('  WARNING: Could not read Conditional Access policies — exclude the participants group from MFA manually.')
         ca_policies = []
     elif ca_policies:
-        print('  These Conditional Access policies require MFA for all users:')
+        print('  The workshop participants group will be excluded from these MFA Conditional Access policies:')
         for pol in ca_policies:
             print(f"    - {pol['name']}")
-        if reg_blocked:
-            print('  Another policy blocks MFA registration outside trusted locations, so new workshop users')
-            print('  will not be able to sign in unless they are excluded.')
-        ca_exclude = ask_yes_no('Exclude the workshop participants group from these policies?', reg_blocked)
+    ca_exclude = bool(ca_policies)
 
     advanced = ask_yes_no('Customize advanced settings (names, prefixes, and VNet ranges)?', False)
     s = dict(
@@ -432,7 +431,7 @@ def collect_inputs():
         sql_database=SQL_DATABASE_NAME, sql_service_objective='S3', sql_entra_only=entra_only,
         sql_admin_user=sql_admin_user, sql_admin_password=sql_admin_password,
         sql_admin_group='DI Workshop SQL Admins', lab_app_name='DIworkshop',
-        user_count=user_count, user_prefix='diuser', user_display_prefix='DI Workshop User',
+        user_count=user_count, user_password=user_password, user_prefix='diuser', user_display_prefix='DI Workshop User',
         workspace_prefix='DIWORKSPACE_',
         vnet_name='vnet-di-workshop', vnet_prefix='10.60.0.0/16', pe_subnet_prefix='10.60.1.0/24',
         gw_subnet_prefix='10.60.2.0/24', gateway_name=GATEWAY_NAME, gateway_sleep=120,
@@ -486,7 +485,7 @@ def collect_inputs():
   Allow-listed IPs:       {', '.join(s['allowed_ips'])}
   Tags (storage, KV):     {', '.join(tags) or 'none'}
   VNet / gateway:         {s['vnet_name']} ({s['vnet_prefix']}) / {s['gateway_name']}
-    Users:                  {s['users'][0]['upn']} … {s['users'][-1]['upn']} ({user_count}, generated passwords with username suffixes)
+    Users:                  {s['users'][0]['upn']} … {s['users'][-1]['upn']} ({user_count}, one shared password)
     Workspaces:             {s['workspace_prefix']}{s['users'][0]['name']} … (each user as Admin, {s['fabric_admin_upn']} as Admin)
   Nightly capacity pause: {f"{pause_time} {pause_tz} ({s['pause_logic_app']})" if pause_nightly else 'no'}
   Fabric tenant settings: {f"configure (group: {s['spn_api_group']})" if configure_tenant else 'leave unchanged'}
@@ -950,11 +949,9 @@ else:
 # ============================================================
 print('\n[Step 11] Entra ID workshop users...')
 graph_token = token_for('https://graph.microsoft.com')
-password_base = generate_password(length=16)
+password = S['user_password']
 created_users = []
 for u in S['users']:
-    suffix = u['name'][len(S['user_prefix']):]
-    password = f'{password_base}{suffix}'
     print(f"  {u['upn']} ...", end=' ')
     existing, st = rest('GET', f"{GRAPH_API}/users/{urllib.parse.quote(u['upn'])}?$select=id", graph_token)
     if st == 200:
