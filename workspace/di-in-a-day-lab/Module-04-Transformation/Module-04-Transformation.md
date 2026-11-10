@@ -29,7 +29,7 @@ This lab introduces two core Fabric data integration features for loading struct
 If you do not already have a Lakehouse, create a new one:
 
 1. In your workspace, select **+ New item** → **Lakehouse**.
-2. Name it `LH_AdvWorks`.
+2. Name it `LH_AdvWorks`. Leave the schema option selected.
 
 ---
 
@@ -49,11 +49,12 @@ If you do not already have a Lakehouse, create a new one:
 3. On the **Home** tab of the ribbon, open the **Options** dialog.
 4. Under **General**, enable:
    - **Always allow parameterization in data source and transformation dialogs**
-5. Under **Scale**, enable all of the following:
-   - Allow use of Fast Copy Connectors
-   - Allow use of the modern query evaluation engine
-   - Optimized copy to Lakehouse
-   - Enable V-order compression
+5. Under **Scale**, make the following selections:
+   - Enable - Allow use of fast copy connectors
+   - Enable - Allow use of the modern query evaluation engine
+   - Enable - Optimized copy to Lakehouse
+   - Disable - Enable V-order compression
+   - accept the defaults on any other options
 6. Close the dialog.
 
 #### Create Parameters
@@ -63,26 +64,26 @@ If you do not already have a Lakehouse, create a new one:
 7. On the **Home** tab, select **Manage Parameters** → **New Parameter**.
 8. Create the first parameter:
    - **Name:** `ServerName`
-   - **Type:** Text
+   - **Type:** Any
    - **Current value:** `sqldiws2026.database.windows.net`
 9. Select **New** and create a second parameter:
    - **Name:** `DBName`
-   - **Type:** Text
+   - **Type:** Any
    - **Current value:** `sqldb-di-workshop-diuserXX` (replace `diuserXX` with your workshop user number, e.g., `sqldb-di-workshop-diuser1`)
 10. Close the dialog.
 
 #### Get Data
 
-11. From the **Get Data** dropdown, select **SQL Server Database**.
+11. From the **Get Data** dropdown, select **Azure SQL Database**.
 12. Click the **pencil** dropdown for Server and Database and select the parameters `ServerName` and `DBName` created above.
-13. Create a new connection (or select an existing one) using **Authentication kind: Organizational Account**. Select **Next**.
+13. Create a new connection (or select an existing one) by selecting the gateway in the dropdown (if needed), choose **Authentication kind: Organizational Account**, sign in, and select **Next**.
 14. Select the **Customer**, **Product**, and **ProductCategory** tables. Select **Create**.
 15. If not already visible, click **Diagram View** in the lower right to see a visual representation of your parameters used across the three queries.
 
 #### Configure Queries
 
 16. Right-click on each query and uncheck **Enable Staging** (the text will convert to italics).
-17. Rename each query if needed: `Customer`, `Product`, `ProductCategory`.
+17. Right-click to rename each query if needed: `Customer`, `Product`, `ProductCategory`.
 
 18. With the **Customer** query selected, go to **Manage Columns** → **Choose Columns**.
     - Keep only: `CustomerID`, `FirstName`, `LastName`, `CompanyName`, `SalesPerson`, `EmailAddress`, `Phone`, `ModifiedDate`.
@@ -95,30 +96,34 @@ If you do not already have a Lakehouse, create a new one:
 
 21. Select the **Product** query, then choose **Combine** → **Merge queries** from the ribbon.
     - **Right table to merge:** `ProductCategory`
-    - **Join columns:** Select the `ProductCategoryID` column header in both tables (the top `Product` table and the bottom `ProductCategory` table) to set it as the join column.
+    - **Join columns:** `ProductCategoryID` (in both tables). Click on that column header in both tables.
     - **Join Kind:** Left outer
     - Select **OK**.
 
     ![Merge dialog with ProductCategoryID selected in both tables and Left outer join kind](images/merge-product-category.png)
 
 22. Expand the newly added `ProductCategory` column and select only the **Name** column.
+
+    ![Expanding the ProductCategory column and selecting only Name](images/expand-product-category.png)
+
 23. Rename the expanded column to `ProductCategory`.
 
-> **Tip:** Click through the different steps in each query to preview the data transformation at each point.
+> **Tip:** Expand the Query settins panel on the right (if not already) and click through the different steps in each query to preview the data transformation at each point. Note that you can also edit the M code in the Formula Bar directly if desired.
 
 #### Write Data to Lakehouse
 
 24. From the ribbon, select the **Default data destination** dropdown → **Add**.
-25. Scroll to the **OneLake Catalog** section and select the `LH_AdvWorks` Lakehouse.
-26. **Deselect** the `ProductCategory` query (its data was already merged into `Product`) and select **Bind selected queries**.
+25. Scroll to the **OneLake Catalog** section and select the `LH_AdvWorks` Lakehouse. If you don't already have a default Lakehouse connector, create one with a unique name using Organizational account and sign in.
+26. Click on the dbo Schema under the LH_AdvWorks (if schema was enabled on Lakehouse creation) and select 'Choose'
+27. **Deselect** the `ProductCategory` query (its data was already merged into `Product`) and select **Bind selected queries**.
 
 #### Refresh the Data
 
-27. From the ribbon, select **Save & run** → **Save, run & close**.
-28. Navigate back to your workspace and wait for the refresh to complete.
+28. From the ribbon, select **Save & run** → **Save, run & close**.
+29. Navigate back to your workspace and wait for the refresh to complete.
     - Hover over the spinning circle to check refresh status.
-29. When the refresh completes, select the **ellipsis (…)** for the Dataflow → **Recent runs**.
-30. Select the DateTime hyperlink to see refresh details for each query/activity, then click on an individual activity to view **Activity statistics**.
+30. When the refresh completes, select the **ellipsis (…)** for the Dataflow → **Recent runs**.
+31. Select the DateTime hyperlink to see refresh details for each query/activity, then click on an individual activity to view **Activity statistics**.
 
 > **✅ Checkpoint:** The `Customer` and `Product` tables (with merged `ProductCategory`) should be visible in the `LH_AdvWorks` Lakehouse.
 
@@ -131,7 +136,7 @@ If you do not already have a Lakehouse, create a new one:
 
 ---
 
-## Exercise 2 — Dataflow Gen2 with Mapping Dataflow for Fact Tables
+## Exercise 2a (Optional) — Dataflow Gen2 with Mapping Dataflow for Fact Tables
 
 **Goal:** Use the Mapping Dataflow feature within a new Dataflow Gen2 to load and enrich the `SalesOrderDetail` and `SalesOrderHeader` fact tables, then orchestrate the refresh with a pipeline.
 
@@ -209,9 +214,9 @@ If you do not already have a Lakehouse, create a new one:
 
 ---
 
-## Exercise 3 — Dataflow Gen2 for Fact Tables (Option 2: Dataflow Gen2 with Incremental Refresh)
+## Exercise 2b — Dataflow Gen2 with Incremental Refresh for Fact Tables
 
-**Goal:** Use a Dataflow Gen2 (Power Query) pattern with Incremental Refresh to load the `SalesOrderHeader` fact table (and optionally `SalesOrderDetail`) into the same Lakehouse.
+**Goal:** Use a Dataflow Gen2 (Power Query) pattern with Incremental Refresh to load the `SalesOrderHeader` fact table into the same Lakehouse.
 
 ### Steps
 
@@ -220,54 +225,103 @@ If you do not already have a Lakehouse, create a new one:
 1. Back in your workspace, open the ellipsis (**...**) next to `DF_DIM_Tables` and select **Save As**.
 2. Name the copy `DF_Fact_Tables_IR` (or a similar name).
 3. Open the copied Dataflow.
-4. Delete 2 of the 3 queries (leave the parameters), then modify the remaining query to load the `SalesOrderHeader` table.
-5. Rename the query to `SalesOrderHeader`.
+4. Right-click each of the 3 queries (`Customer`, `Product`, and `ProductCategory`) and select **Delete**. Leave the `ServerName` and `DBName` parameters in place.
+5. Create a new query for the `SalesOrderHeader` table by repeating steps 11–14 from Exercise 1: select **Get Data** → **Azure SQL Database**, set Server and Database to the `ServerName` and `DBName` parameters, select your existing connection, and select only the **SalesOrderHeader** table. Then, as in step 16, right-click the query and uncheck **Enable Staging**.
 
 #### Shape the Query
 
-6. Add a **Choose columns** step and select all columns except `RowGuid`.
-7. Remove any related-table columns if present (for example, columns where values appear as `Record`).
-8. On the **Add column** tab, select **Custom column**.
-9. Create custom column `DaysToShip` using a formula that calculates the difference between `ShipDate` and `OrderDate`.
-10. Create custom column `ShipVsDue` using a formula that calculates the difference between `ShipDate` and `DueDate`.
-11. Convert both columns to **Whole Number** type.
-12. Add another custom column named `OnTime` with an `if ... then ... else` formula that returns:
-    - `Y` when `ShipVsDue <= 0`
-    - `N` otherwise
+6. Add a **Choose columns** step and select all columns except these:
+   - `rowguid`
+   - `SalesLT.Address(BillToAddressID)`
+   - `SalesLT.Address(ShipToAddressID)`
+   - `SalesLT.Customer`
+   - `SalesLT.SalesOrderDetail`
+7. On the **Add column** tab, select **Custom column**.
+8. Create custom column `DaysToShip` using a formula that calculates the difference between `ShipDate` and `OrderDate`. Note you can double click on column names in the Available Columns box to add them to the formula. You can also use the **Copilot** prompt at the top of the **Custom column** dialog to write the formula for you (for example, `calculate the difference between ShipDate and OrderDate`), or copy and paste this formula:
+
+    ```powerquery
+    let
+        ship = try DateTime.From([ShipDate]) otherwise null,
+        order = try DateTime.From([OrderDate]) otherwise null
+    in
+        if ship <> null and order <> null
+        then Duration.Days(ship - order)
+        else null
+    ```
+
+    ![Custom column dialog using Copilot to create the DaysToShip formula](images/custom-column-days-to-ship.png)
+9. Create custom column `ShipVsDue` using a formula that calculates the difference between `ShipDate` and `DueDate`. As with the previous step, you can use the **Copilot** prompt at the top of the **Custom column** dialog (for example, `calculate the difference between ShipDate and DueDate`), or copy and paste this formula:
+
+    ```powerquery
+    if [ShipDate] <> null and [ShipDate] <> ""
+    then Duration.Days(
+            DateTime.From([ShipDate])
+            - DateTime.From([DueDate])
+         )
+    else null
+    ```
+
+    ![Custom column dialog using Copilot to create the ShipVsDue formula](images/custom-column-ship-vs-due.png)
+10. Convert both columns to **Whole Number** type through either the right-click options or by clicking on left side of column header (ABC123).
+11. Add another custom column named `OnTime` with an `if ... then ... else` formula that returns:
+    - "Y" when `ShipVsDue <= 0`
+    - "N" otherwise
+    - null when `ShipVsDue` is null
+    - Change the data type to Text
+
+    As with the previous steps, you can use the **Copilot** prompt at the top of the **Custom column** dialog. Your prompt **must include how to handle nulls**, or Copilot will get the formula wrong. For example:
+
+    ```text
+    I need an if ... then ... else formula that returns: "Y" when ShipVsDue' <= 0 "N" otherwise. If the value is null then we should evaluate it as null
+    ```
+
+    Or copy and paste this formula:
+
+    ```powerquery
+    if [ShipVsDue] = null then
+        null
+    else if Number.From([ShipVsDue]) <= 0 then
+        "Y"
+    else
+        "N"
+    ```
+
+    ![Custom column dialog using Copilot to create the OnTime formula](images/custom-column-on-time.png)
 
 #### Configure Destination Settings for Incremental Refresh
 
-13. Add or update the Data Destination to point to the same `LH_AdvWorks` Lakehouse.
-14. In **Advanced options**:
-    - Set **Enable V-Order compression** to `False`
-    - Confirm **Navigate using full hierarchy** is set to `True`
-15. Turn off **Use automatic settings**.
-16. Set:
+12. Remove the existing data destination that was copied over from `DF_DIM_Tables`.
+13. Add a new destination that points to the same `LH_AdvWorks` Lakehouse. Be sure to use the **Add data destination** button on the ribbon, not the **Default data destination** button.
+14. Turn off **Use automatic settings** (required for incremental refresh)
+15. Set: (required for incremental refresh)
     - **Update method:** Replace
     - **Schema option:** Fixed Schema
-17. Select **Apply**.
+
+    ![Destination settings with automatic settings off, Replace update method, and Fixed schema](images/destination-settings-incremental.png)
+16. Select **Save settings**.
 
 > **Note:** These destination settings are required to enable Incremental Refresh in this pattern.
 
 #### Enable Incremental Refresh
 
-18. Right-click `SalesOrderHeader` and select **Incremental Refresh**.
-19. Configure the dialog with:
+17. Right-click `SalesOrderHeader` in the list of Queries on the left and select **Incremental Refresh**.
+18. Check the box to enable and configure the dialog with:
     - **Column to filter by:** `OrderDate`
     - **Extract data from past:** 36 months
     - **Bucket size:** Month
     - **Detect data changes using:** `ModifiedDate`
-    - Keep **Require that query fully folds** enabled
-20. Confirm the query icon shows the Incremental Refresh symbol.
+    - Uncheck **Require that query fully folds** enabled in the Advanced options section (the custom columns we've created may not fold back to the source)
+19. Confirm the query icon shows the Incremental Refresh symbol in the list of Queries on the left.
 
-#### Optional: Add SalesOrderDetail Without Incremental Refresh
+#### Refresh the Data
 
-21. Duplicate the `SalesOrderHeader` query.
-22. In the duplicate, right-click the **Navigation** step and select **Delete until end**.
-23. Re-point the navigation to `SalesOrderDetail` and keep desired columns.
-24. Do not enable Incremental Refresh for `SalesOrderDetail`.
+20. From the ribbon, select **Save & run** → **Save, run & close**.
+21. Navigate back to your workspace and wait for the refresh to complete.
+    - Hover over the spinning circle to check refresh status.
+22. When the refresh completes, select the **ellipsis (…)** for the Dataflow → **Recent runs**.
+23. Select the DateTime hyperlink to see refresh details for each query/activity, then click on an individual activity to view **Activity statistics**.
 
-> **✅ Checkpoint:** `SalesOrderHeader` is configured with Incremental Refresh and loads to `LH_AdvWorks`. Optional `SalesOrderDetail` can be loaded in the same Dataflow without Incremental Refresh.
+> **✅ Checkpoint:** `SalesOrderHeader` is configured with Incremental Refresh and loads to `LH_AdvWorks`.
 
 ### Key Takeaways — Incremental Refresh in Dataflow Gen2
 
@@ -278,7 +332,7 @@ If you do not already have a Lakehouse, create a new one:
 
 ---
 
-## Optional — Direct Lake Semantic Model and Report
+## Bonus — Direct Lake Semantic Model and Report
 
 Create a simple **Direct Lake semantic model** from the `LH_AdvWorks` Lakehouse to analyze the loaded dimension and fact data:
 

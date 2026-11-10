@@ -559,90 +559,28 @@ After QuickDemo, restore `Lab` as the active library set, then run **Normal** ag
 
 **Why first?** A single invocation separates connection and authorization problems from the mapping logic you will add later.
 
-1. In `AF_ORCH_Parent`, select **New DAG file**, enter `orch_parent_probe`, and select **Create**.
+1. In `AF_ORCH_Parent`, select **Run Fabric Item** on the canvas.
 
 <p align="center">
-<img src=".\images\Part_4_Step_2_1.png" width="60%">
+<img src=".\images\Part_4_Step_2_1_RunFabricItem.png" width="60%">
 </p>
 
-
-2. Right-click on line 29 in the code-editor and select **Run Fabric Item**. 
-<p align="center">
-<img src=".\images\Part_4_Step_2_3.png" width="90%">
-</p>
-
-3. Fill out the form. Disable **Deferrable executions**, then select **Insert**
+2. Fill out the form with the following values, then select **Create**:
+   - **Fabric connection:** Your connection from the previous step (it should be the only one)
+   - **Workspace:** `DIWORKSPACE_diuserXX` (replace `diuserXX` with your workshop user number)
+   - **Item type:** Pipeline
+   - **DAG name:** `orch_parent_probe`
+   - **Deferrable execution:** Unchecked
 
 <p align="center">
 <img src=".\images\Part_4_Step_2_4.png" width="90%">
 </p>
 
-4. Replace line 48 `hello_task` with `run_item`
-
-
-<p align="center">
-<img src=".\images\Part_4_Step_2_5.png" width="90%">
-</p>
-
-
-```python
-from airflow.providers.microsoft.fabric.operators.run_item import MSFabricRunJobOperator
-from airflow.providers.microsoft.fabric.operators.run_item import MSFabricPipelineJobParameters
-from datetime import datetime
-from airflow import DAG
-from airflow.operators.bash import BashOperator
-
-# Define the default arguments for the DAG
-default_args = {
-    'owner': 'airflow',
-    'depends_on_past': False,
-    'start_date': datetime(2023, 5, 1),
-    'email_on_failure': False,
-    'email_on_retry': False,
-    'retries': 1
-}
-
-# Instantiate the DAG object
-with DAG(
-    'dags-dag1.py',
-    default_args=default_args,
-    description='A simple Hello World DAG',
-    schedule_interval=None,
-    catchup=False
-) as dag:
-
-    # Define the tasks
-    hello_task = BashOperator(
-        task_id='hello_world_task',
-        bash_command='echo "Hello, World!"'
-    )
-  # Pipeline
-    run_item = MSFabricRunJobOperator(
-        task_id="runPipelineTask",
-        fabric_conn_id="39bfa126-3394-4031-9d6b-6c8963d67ede",
-        workspace_id="c266d2f7-f510-4f42-9365-6b506d4a1bca",  # DIWORKSPACE_diuser2
-        item_id="dffcb2e1-a894-4757-ba47-1f91fbff9b1e",  # PL_ORCH_Child
-        job_type="Pipeline",
-        timeout=600,
-        deferrable=False,
-        job_params= MSFabricPipelineJobParameters()
-            .set_parameter("work_item", "Custom")
-            .set_parameter("wait_seconds", 5)
-            .set_parameter("force_failure", "false")
-            .to_json()
-    )
-
-    # Set the task dependencies
-run_item
-```
+3. **Save**, confirm no import error, and select **Run DAG** once. Use **Monitor in Apache Airflow** or the run's details to inspect the task and linked child.
 
 
 
-5. **Save**, confirm no import error, and select **Run DAG** once. Use **Monitor in Apache Airflow** or the run's details to inspect the task and linked child.
-
-
-
-6. Verify this exact result:
+4. Verify this exact result:
 
    | Check | Required observation |
    |---|---|
@@ -842,7 +780,7 @@ with DAG(
 
 ### Step 5 — Run and verify
 
-Use DAG **`orch_parent`**, not the probe. For **every trigger**, explicitly supply the complete parameter set below; do not assume a dialog carries forward previous values.
+Use DAG **`orch_parent`**, not the probe. You will execute the DAG **4 times** — once for each row in the table below, using that row's parameters. The parameters can be found starting on line 37 of the `orch_parent` DAG code. For **every trigger**, explicitly supply the complete parameter set below; do not assume a dialog carries forward previous values.
 
 | Run | `run_children` | `work_items` | `wait_seconds` | `fail_item` |
 |---|---|---|---:|---|
